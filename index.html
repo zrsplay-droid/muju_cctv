@@ -15,48 +15,67 @@
     font-family:-apple-system,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif; }
   body { padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom); }
   .wrap { max-width:1100px; margin:0 auto; padding:12px 16px 24px; }
-  header { display:flex; align-items:baseline; gap:10px; margin:4px 0 12px; }
+  body.all .wrap { max-width:1600px; }
+  header { display:flex; align-items:center; gap:10px; margin:4px 0 12px; }
   header h1 { font-size:18px; margin:0; }
   header .meta { margin-left:auto; color:var(--muted); font-size:12px; font-variant-numeric:tabular-nums; }
+  .seg { display:flex; border:1px solid var(--line); border-radius:8px; overflow:hidden; }
+  .seg button { background:none; border:0; color:var(--muted); font:inherit; font-size:13px; padding:5px 12px; cursor:pointer; }
+  .seg button.on { background:var(--accent); color:#111; font-weight:600; }
   .player { position:sticky; top:0; z-index:5; background:var(--bg); padding-bottom:4px; }
   .live { background:var(--tile); border:1px solid var(--line); border-radius:10px; overflow:hidden; }
-  .live .bar { display:flex; align-items:center; gap:8px; font-size:14px; padding:8px 12px; border-bottom:1px solid var(--line); }
-  .live .bar .src, .card .src { color:var(--muted); font-size:12px; }
+  .bar { display:flex; align-items:center; gap:8px; font-size:14px; padding:8px 12px; border-bottom:1px solid var(--line); min-width:0; }
+  .bar b { white-space:nowrap; }
+  .bar .src, .card .src { color:var(--muted); font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .dot { width:8px; height:8px; border-radius:50%; background:#e5484d; box-shadow:0 0 0 3px rgba(229,72,77,.2); flex:none; }
-  .live .bar button { margin-left:auto; background:none; border:1px solid var(--line); color:var(--text);
-    border-radius:6px; padding:4px 10px; font-size:12px; flex:none; }
+  .bar button { margin-left:auto; background:none; border:1px solid var(--line); color:var(--text);
+    border-radius:6px; padding:4px 10px; font-size:12px; flex:none; cursor:pointer; }
   .vbox { position:relative; aspect-ratio:16/9; background:#000; }
   .vbox video { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; }
   .vbox .msg { position:absolute; inset:0; display:none; align-items:center; justify-content:center; color:var(--muted); font-size:13px; text-align:center; padding:12px; }
   .sec { margin:18px 0 10px; color:var(--muted); font-size:13px; }
   .grid { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; }
   .card { display:flex; flex-direction:column; gap:4px; padding:12px; min-height:64px; text-align:left; font:inherit; color:var(--text);
-    background:var(--tile); border:1px solid var(--line); border-radius:10px; cursor:pointer; }
+    background:var(--tile); border:1px solid var(--line); border-radius:10px; cursor:pointer; min-width:0; }
   .card b { font-size:15px; font-weight:600; }
   .card.on { border-color:var(--accent); box-shadow:inset 0 0 0 1px var(--accent); }
   .card.on b { color:var(--accent); }
+  .wall { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; }
+  .wall .live { cursor:pointer; }
+  .wall .bar { font-size:13px; padding:6px 10px; }
   .map { display:block; border:1px solid var(--line); border-radius:10px; overflow:hidden; }
   .map img { display:block; width:100%; height:auto; }
+  #single[hidden], #wall[hidden] { display:none; }
+  @media (max-width:520px) { .wall { grid-template-columns:1fr; } }
   @media (min-width:800px) { .grid { grid-template-columns:repeat(4,1fr); } }
+  @media (min-width:1200px) { .wall { grid-template-columns:repeat(3,1fr); } }
+  @media (min-width:1500px) { .wall { grid-template-columns:repeat(4,1fr); } }
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
     <h1>무주 CCTV</h1>
+    <div class="seg"><button id="m1">한 개</button><button id="mAll">전체</button></div>
     <span class="meta">새로고침 <span id="count">60</span>초</span>
   </header>
 
-  <div class="player">
-    <div class="live">
-      <div class="bar"><span class="dot"></span><b id="name"></b><span class="src" id="src"></span>
-        <button id="now">새로고침</button></div>
-      <div class="vbox"><video id="v" muted autoplay playsinline></video><div class="msg" id="msg"></div></div>
+  <section id="single">
+    <div class="player">
+      <div class="live">
+        <div class="bar"><span class="dot"></span><b id="name"></b><span class="src" id="src"></span>
+          <button id="now">새로고침</button></div>
+        <div class="vbox" id="mainBox"></div>
+      </div>
     </div>
-  </div>
+    <div class="sec">장소 선택</div>
+    <div class="grid" id="grid"></div>
+  </section>
 
-  <div class="sec">장소 선택</div>
-  <div class="grid" id="grid"></div>
+  <section id="wall" hidden>
+    <div class="sec" style="margin-top:0">전체 · 화면 누르면 그 장소만 크게</div>
+    <div class="wall" id="wallGrid"></div>
+  </section>
 
   <div class="sec">웹캠 위치 · 누르면 크게 보기</div>
   <a class="map" href="map.jpg"><img src="map.jpg" alt="무주 리조트 웹캠 위치 지도" loading="lazy"></a>
@@ -74,46 +93,95 @@ const CAMS = [
   { id:"04", name:"서역기행·썬다운", src:"10K 코스" },
 ].map(c => ({ ...c, url: c.url || RELAY + c.id + "/playlist.m3u8" }));
 
-const v = document.getElementById("v"), msg = document.getElementById("msg");
+// 플레이어 하나 = video + hls
+function makePlayer(box) {
+  const v = document.createElement("video");
+  v.muted = true; v.autoplay = true; v.playsInline = true; v.setAttribute("playsinline", "");
+  const msg = document.createElement("div"); msg.className = "msg";
+  box.append(v, msg);
+  let hls = null, url = null;
+  const show = t => { msg.textContent = t; msg.style.display = t ? "flex" : "none"; };
+  v.addEventListener("playing", () => show(""));
+  return {
+    load(u) {
+      url = u || url; show("불러오는 중…");
+      if (hls) { hls.destroy(); hls = null; }
+      if (window.Hls && Hls.isSupported()) {
+        hls = new Hls({ liveSyncDurationCount: 2 });
+        hls.loadSource(url); hls.attachMedia(v);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => v.play().catch(() => {}));
+        hls.on(Hls.Events.ERROR, (e, d) => { if (d.fatal) show("영상 불러오기 실패 — 잠시 후 새로고침"); });
+      } else if (v.canPlayType("application/vnd.apple.mpegurl")) {
+        v.src = url; v.play().catch(() => {});
+      }
+    },
+    stop() { if (hls) { hls.destroy(); hls = null; } v.removeAttribute("src"); v.load(); },
+  };
+}
+
+// 한 개 보기
+const main = makePlayer(document.getElementById("mainBox"));
 const nameEl = document.getElementById("name"), srcEl = document.getElementById("src");
 const grid = document.getElementById("grid");
-let cur = CAMS.find(c => c.id === location.hash.slice(1)) || CAMS[0];
-let hls = null;
-
+let cur = CAMS[0];
 CAMS.forEach(c => {
   const b = document.createElement("button");
   b.className = "card"; b.dataset.id = c.id;
   b.innerHTML = "<b></b><span class='src'></span>";
   b.querySelector("b").textContent = c.name;
   b.querySelector(".src").textContent = c.src || " ";
-  b.onclick = () => { cur = c; history.replaceState(null, "", "#" + c.id); reload(); };
+  b.onclick = () => { cur = c; setMode("one"); };
   grid.appendChild(b);
 });
-
-function show(t) { msg.textContent = t; msg.style.display = t ? "flex" : "none"; }
-function load() {
+function loadMain() {
   nameEl.textContent = cur.name; srcEl.textContent = cur.src;
   grid.querySelectorAll(".card").forEach(b => b.classList.toggle("on", b.dataset.id === cur.id));
-  show("불러오는 중…");
-  if (hls) { hls.destroy(); hls = null; }
-  if (window.Hls && Hls.isSupported()) {
-    hls = new Hls({ liveSyncDurationCount: 2 });
-    hls.loadSource(cur.url); hls.attachMedia(v);
-    hls.on(Hls.Events.MANIFEST_PARSED, () => v.play().catch(() => {}));
-    hls.on(Hls.Events.ERROR, (e, d) => { if (d.fatal) show("영상 불러오기 실패 — 잠시 후 새로고침"); });
-  } else if (v.canPlayType("application/vnd.apple.mpegurl")) {
-    v.src = cur.url; v.play().catch(() => {});
-  }
+  main.load(cur.url);
 }
-v.addEventListener("playing", () => show(""));
+
+// 전체 보기
+const wallGrid = document.getElementById("wallGrid");
+const wall = CAMS.map(c => {
+  const t = document.createElement("div");
+  t.className = "live";
+  t.innerHTML = "<div class='bar'><span class='dot'></span><b></b><span class='src'></span></div><div class='vbox'></div>";
+  t.querySelector("b").textContent = c.name;
+  t.querySelector(".src").textContent = c.src;
+  t.onclick = () => { cur = c; setMode("one"); window.scrollTo(0, 0); };
+  wallGrid.appendChild(t);
+  return { c, p: makePlayer(t.querySelector(".vbox")) };
+});
+
+// 모드 전환
+let mode = "one";
+const m1 = document.getElementById("m1"), mAll = document.getElementById("mAll");
+function setMode(m) {
+  mode = m;
+  document.getElementById("single").hidden = m !== "one";
+  document.getElementById("wall").hidden = m !== "all";
+  document.body.classList.toggle("all", m === "all");
+  m1.classList.toggle("on", m === "one"); mAll.classList.toggle("on", m === "all");
+  history.replaceState(null, "", "#" + (m === "all" ? "all" : cur.id));
+  reload();
+}
+m1.onclick = () => setMode("one");
+mAll.onclick = () => setMode("all");
+
+function reload() {
+  if (mode === "one") { wall.forEach(w => w.p.stop()); loadMain(); }
+  else { main.stop(); wall.forEach(w => w.p.load(w.c.url)); }
+  left = REFRESH; countEl.textContent = left;
+}
 
 const REFRESH = 60; let left = REFRESH;
 const countEl = document.getElementById("count");
-function reload() { load(); left = REFRESH; countEl.textContent = left; }
 document.getElementById("now").onclick = reload;
 setInterval(() => { if (--left <= 0) reload(); countEl.textContent = left; }, 1000);
 document.addEventListener("visibilitychange", () => { if (!document.hidden) reload(); });
-load();
+
+const h = location.hash.slice(1);
+cur = CAMS.find(c => c.id === h) || CAMS[0];
+setMode(h === "all" ? "all" : "one");
 </script>
 </body>
 </html>
