@@ -2,26 +2,106 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="refresh" content="60">
-<title>무주덕유산 CCTV 모아보기</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0e0f11">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="무주 CCTV">
+<title>무주 CCTV</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.13/hls.min.js"></script>
 <style>
-:root{color-scheme:dark;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#111;color:#f5f5f5}
-*{box-sizing:border-box}body{margin:0;padding:24px}header{max-width:1500px;margin:0 auto 20px}h1{font-size:24px;margin:0 0 8px}p{color:#bbb;margin:0;line-height:1.55}.grid{max-width:1500px;margin:auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:16px}.card{background:#202020;border:1px solid #333;border-radius:10px;overflow:hidden}.card h2{font-size:16px;margin:0;padding:12px 14px}.screen{aspect-ratio:16/9;background:#050505}.screen iframe{width:100%;height:100%;border:0}.actions{padding:9px 14px 13px}.actions a{color:#8fc8ff;text-decoration:none;font-size:14px}.actions a:hover{text-decoration:underline}.note{max-width:1500px;margin:18px auto 0;font-size:13px}
+  :root { --bg:#0e0f11; --tile:#17191c; --line:#2a2d32; --text:#e8e9eb; --muted:#8a8f97; --accent:#f2b705; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { margin:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif; }
+  body { padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom); }
+  .wrap { max-width:1100px; margin:0 auto; padding:12px 16px 24px; }
+  header { display:flex; align-items:baseline; gap:10px; margin:4px 0 12px; }
+  header h1 { font-size:18px; margin:0; }
+  header .meta { margin-left:auto; color:var(--muted); font-size:12px; font-variant-numeric:tabular-nums; }
+  .live { background:var(--tile); border:1px solid var(--line); border-radius:10px; overflow:hidden; }
+  .live .bar, .sec { display:flex; align-items:center; gap:8px; font-size:14px; }
+  .live .bar { padding:8px 12px; border-bottom:1px solid var(--line); }
+  .live .bar .src, .card .src { color:var(--muted); font-size:12px; }
+  .dot { width:8px; height:8px; border-radius:50%; background:#e5484d; box-shadow:0 0 0 3px rgba(229,72,77,.2); }
+  .live .bar button { margin-left:auto; background:none; border:1px solid var(--line); color:var(--text);
+    border-radius:6px; padding:4px 10px; font-size:12px; }
+  .vbox { position:relative; aspect-ratio:16/9; background:#000; }
+  .vbox video { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; }
+  .vbox .msg { position:absolute; inset:0; display:none; align-items:center; justify-content:center; color:var(--muted); font-size:13px; }
+  .sec { margin:20px 0 10px; color:var(--muted); font-size:13px; }
+  .grid { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; }
+  .card { display:flex; flex-direction:column; gap:4px; padding:14px 12px; min-height:78px; text-decoration:none; color:var(--text);
+    background:var(--tile); border:1px solid var(--line); border-radius:10px; }
+  .card:active { border-color:var(--accent); }
+  .card b { font-size:15px; font-weight:600; }
+  .card .go { margin-top:auto; font-size:12px; color:var(--accent); }
+  .note { color:var(--muted); font-size:12px; line-height:1.6; margin-top:14px; }
+  @media (min-width:800px) { .grid { grid-template-columns:repeat(3,1fr); } }
 </style>
 </head>
 <body>
-<header><h1>무주덕유산 CCTV 모아보기</h1><p>카메라 화면을 동시에 불러옵니다. 페이지 전체가 1분마다 자동으로 새로고침됩니다. 화면이 나오지 않으면 카드 아래의 ‘원본 열기’를 누르세요.</p></header>
-<main class="grid" id="grid"></main>
-<p class="note">리조트 웹캠은 이용 시간이 1분으로 안내되어 있으며, 영상은 리조트 사정으로 제공되지 않을 수 있습니다.</p>
+<div class="wrap">
+  <header>
+    <h1>무주 CCTV</h1>
+    <span class="meta">새로고침 <span id="count">60</span>초</span>
+  </header>
+
+  <div class="live">
+    <div class="bar"><span class="dot"></span><b>설천봉 정상</b><span class="src">국립공원 · 실시간</span>
+      <button id="now">새로고침</button></div>
+    <div class="vbox"><video id="v" muted autoplay playsinline></video><div class="msg" id="msg">영상 불러오는 중…</div></div>
+  </div>
+
+  <div class="sec">리조트 웹캠 · 누르면 새 창으로 열림</div>
+  <div class="grid" id="grid"></div>
+
+  <p class="note">리조트 웹캠은 보안 연결(https)을 지원하지 않아서 이 페이지 안에 바로 띄울 수 없어 새 창으로 열려.
+    리조트 웹캠은 30초 재생 후 멈추니까, 멈추면 그 창을 새로고침하면 돼.</p>
+</div>
+
 <script>
-const cameras=[
- ['설천봉 정상','07'],['설천상단슬로프','06'],['모차르트·미뉴에트','08'],
- ['만선봉 정상','02'],['하이디 하우스','03'],['서역기행·썬다운','04'],
- ['설천하우스','05'],['만선하우스','01'],['폴카','09'],['실크로드','10'],['커넥션','11']
+const KNPS = "https://live.knps.or.kr/cctv/hls/zsulchun.m3u8";
+const R = "http://www.mdysresort.com/guide/webcam_popup_jh.asp?cam_num=";
+const RESORT = [
+  ["설천봉 정상", "리조트", "07"],
+  ["설천하우스", "곤돌라 타는 곳", "05"],
+  ["커넥션", "설천하우스 옆 쌍쌍리프트", "11"],
+  ["설천상단슬로프", "", "06"],
+  ["실크로드", "", "10"],
+  ["서역기행·썬다운", "10K 코스", "04"],
 ];
-const root='https://www.mdysresort.com/guide/webcam_popup_jh.asp?cam_num=';
-document.getElementById('grid').innerHTML=cameras.map(([name,id])=>{const url=root+id;return `<section class="card"><h2>${name}</h2><div class="screen"><iframe src="${url}" title="${name}" allow="autoplay; fullscreen" loading="lazy"></iframe></div><div class="actions"><a href="${url}" target="_blank" rel="noopener">원본 열기 ↗</a></div></section>`}).join('');
+const grid = document.getElementById("grid");
+RESORT.forEach(([name, src, n]) => {
+  const a = document.createElement("a");
+  a.className = "card"; a.href = R + n; a.target = "_blank"; a.rel = "noopener";
+  a.innerHTML = "<b></b><span class='src'></span><span class='go'>보기 ↗</span>";
+  a.querySelector("b").textContent = name;
+  a.querySelector(".src").textContent = src;
+  grid.appendChild(a);
+});
+
+const v = document.getElementById("v"), msg = document.getElementById("msg");
+let hls = null;
+function load() {
+  msg.style.display = "none";
+  if (window.Hls && Hls.isSupported()) {
+    if (hls) hls.destroy();
+    hls = new Hls({ liveSyncDurationCount: 2 });
+    hls.loadSource(KNPS); hls.attachMedia(v);
+    hls.on(Hls.Events.MANIFEST_PARSED, () => v.play().catch(() => {}));
+    hls.on(Hls.Events.ERROR, (e, d) => { if (d.fatal) { msg.textContent = "영상 불러오기 실패 — 잠시 후 다시 시도"; msg.style.display = "flex"; } });
+  } else if (v.canPlayType("application/vnd.apple.mpegurl")) {
+    v.src = KNPS + "?_t=" + Date.now(); v.play().catch(() => {});
+  }
+}
+load();
+
+const REFRESH = 60; let left = REFRESH;
+const countEl = document.getElementById("count");
+function reload() { load(); left = REFRESH; countEl.textContent = left; }
+document.getElementById("now").onclick = reload;
+setInterval(() => { if (--left <= 0) reload(); countEl.textContent = left; }, 1000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) reload(); });
 </script>
 </body>
 </html>
