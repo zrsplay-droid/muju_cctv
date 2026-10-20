@@ -54,10 +54,10 @@
     <div class="vbox"><video id="v" muted autoplay playsinline></video><div class="msg" id="msg">영상 불러오는 중…</div></div>
   </div>
 
-  <div class="sec">리조트 웹캠 · 누르면 새 창으로 열림</div>
+  <div class="sec">리조트 웹캠 · 누르면 바로 열림 (뒤로가기로 복귀)</div>
   <div class="grid" id="grid"></div>
 
-  <p class="note">리조트 웹캠은 보안 연결(https)을 지원하지 않아서 이 페이지 안에 바로 띄울 수 없어 새 창으로 열려.
+  <p class="note">리조트 웹캠은 보안 연결(https)을 지원하지 않아서 이 페이지 안에 같이 띄울 수는 없어서, 누르면 그 웹캠 화면으로 넘어가. 뒤로가기 하면 여기로 돌아와.
     리조트 웹캠은 30초 재생 후 멈추니까, 멈추면 그 창을 새로고침하면 돼.</p>
 
   <div class="sec">웹캠 위치 · 누르면 크게 보기</div>
@@ -78,7 +78,7 @@ const RESORT = [
 const grid = document.getElementById("grid");
 RESORT.forEach(([name, src, n]) => {
   const a = document.createElement("a");
-  a.className = "card"; a.href = R + n; a.target = "_blank"; a.rel = "noopener";
+  a.className = "card"; a.href = R + n;
   a.innerHTML = "<b></b><span class='src'></span><span class='go'>보기 ↗</span>";
   a.querySelector("b").textContent = name;
   a.querySelector(".src").textContent = src;
