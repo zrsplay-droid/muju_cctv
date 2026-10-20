@@ -18,27 +18,26 @@
   header { display:flex; align-items:baseline; gap:10px; margin:4px 0 12px; }
   header h1 { font-size:18px; margin:0; }
   header .meta { margin-left:auto; color:var(--muted); font-size:12px; font-variant-numeric:tabular-nums; }
+  .player { position:sticky; top:0; z-index:5; background:var(--bg); padding-bottom:4px; }
   .live { background:var(--tile); border:1px solid var(--line); border-radius:10px; overflow:hidden; }
-  .live .bar, .sec { display:flex; align-items:center; gap:8px; font-size:14px; }
-  .live .bar { padding:8px 12px; border-bottom:1px solid var(--line); }
+  .live .bar { display:flex; align-items:center; gap:8px; font-size:14px; padding:8px 12px; border-bottom:1px solid var(--line); }
   .live .bar .src, .card .src { color:var(--muted); font-size:12px; }
-  .dot { width:8px; height:8px; border-radius:50%; background:#e5484d; box-shadow:0 0 0 3px rgba(229,72,77,.2); }
+  .dot { width:8px; height:8px; border-radius:50%; background:#e5484d; box-shadow:0 0 0 3px rgba(229,72,77,.2); flex:none; }
   .live .bar button { margin-left:auto; background:none; border:1px solid var(--line); color:var(--text);
-    border-radius:6px; padding:4px 10px; font-size:12px; }
+    border-radius:6px; padding:4px 10px; font-size:12px; flex:none; }
   .vbox { position:relative; aspect-ratio:16/9; background:#000; }
   .vbox video { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; }
-  .vbox .msg { position:absolute; inset:0; display:none; align-items:center; justify-content:center; color:var(--muted); font-size:13px; }
-  .sec { margin:20px 0 10px; color:var(--muted); font-size:13px; }
+  .vbox .msg { position:absolute; inset:0; display:none; align-items:center; justify-content:center; color:var(--muted); font-size:13px; text-align:center; padding:12px; }
+  .sec { margin:18px 0 10px; color:var(--muted); font-size:13px; }
   .grid { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; }
-  .card { display:flex; flex-direction:column; gap:4px; padding:14px 12px; min-height:78px; text-decoration:none; color:var(--text);
-    background:var(--tile); border:1px solid var(--line); border-radius:10px; }
-  .card:active { border-color:var(--accent); }
+  .card { display:flex; flex-direction:column; gap:4px; padding:12px; min-height:64px; text-align:left; font:inherit; color:var(--text);
+    background:var(--tile); border:1px solid var(--line); border-radius:10px; cursor:pointer; }
   .card b { font-size:15px; font-weight:600; }
-  .card .go { margin-top:auto; font-size:12px; color:var(--accent); }
-  .note { color:var(--muted); font-size:12px; line-height:1.6; margin-top:14px; }
+  .card.on { border-color:var(--accent); box-shadow:inset 0 0 0 1px var(--accent); }
+  .card.on b { color:var(--accent); }
   .map { display:block; border:1px solid var(--line); border-radius:10px; overflow:hidden; }
   .map img { display:block; width:100%; height:auto; }
-  @media (min-width:800px) { .grid { grid-template-columns:repeat(3,1fr); } }
+  @media (min-width:800px) { .grid { grid-template-columns:repeat(4,1fr); } }
 </style>
 </head>
 <body>
@@ -48,58 +47,65 @@
     <span class="meta">새로고침 <span id="count">60</span>초</span>
   </header>
 
-  <div class="live">
-    <div class="bar"><span class="dot"></span><b>설천봉 정상</b><span class="src">국립공원 · 실시간</span>
-      <button id="now">새로고침</button></div>
-    <div class="vbox"><video id="v" muted autoplay playsinline></video><div class="msg" id="msg">영상 불러오는 중…</div></div>
+  <div class="player">
+    <div class="live">
+      <div class="bar"><span class="dot"></span><b id="name"></b><span class="src" id="src"></span>
+        <button id="now">새로고침</button></div>
+      <div class="vbox"><video id="v" muted autoplay playsinline></video><div class="msg" id="msg"></div></div>
+    </div>
   </div>
 
-  <div class="sec">리조트 웹캠 · 누르면 바로 열림 (뒤로가기로 복귀)</div>
+  <div class="sec">장소 선택</div>
   <div class="grid" id="grid"></div>
-
-  <p class="note">리조트 웹캠은 보안 연결(https)을 지원하지 않아서 이 페이지 안에 같이 띄울 수는 없어서, 누르면 그 웹캠 화면으로 넘어가. 뒤로가기 하면 여기로 돌아와.
-    리조트 웹캠은 30초 재생 후 멈추니까, 멈추면 그 창을 새로고침하면 돼.</p>
 
   <div class="sec">웹캠 위치 · 누르면 크게 보기</div>
   <a class="map" href="map.jpg"><img src="map.jpg" alt="무주 리조트 웹캠 위치 지도" loading="lazy"></a>
 </div>
 
 <script>
-const KNPS = "https://live.knps.or.kr/cctv/hls/zsulchun.m3u8";
-const R = "http://www.mdysresort.com/guide/webcam_popup_jh.asp?cam_num=";
-const RESORT = [
-  ["설천봉 정상", "리조트", "07"],
-  ["설천하우스", "곤돌라 타는 곳", "05"],
-  ["커넥션", "설천하우스 옆 쌍쌍리프트", "11"],
-  ["설천상단슬로프", "", "06"],
-  ["실크로드", "", "10"],
-  ["서역기행·썬다운", "10K 코스", "04"],
-];
-const grid = document.getElementById("grid");
-RESORT.forEach(([name, src, n]) => {
-  const a = document.createElement("a");
-  a.className = "card"; a.href = R + n;
-  a.innerHTML = "<b></b><span class='src'></span><span class='go'>보기 ↗</span>";
-  a.querySelector("b").textContent = name;
-  a.querySelector(".src").textContent = src;
-  grid.appendChild(a);
-});
+const RELAY = "https://muju-cctv.zrsplay.workers.dev/cam/";
+const CAMS = [
+  { id:"knps", name:"설천봉 정상", src:"국립공원", url:"https://live.knps.or.kr/cctv/hls/zsulchun.m3u8" },
+  { id:"07", name:"설천봉 정상", src:"리조트" },
+  { id:"05", name:"설천하우스", src:"곤돌라 타는 곳" },
+  { id:"11", name:"커넥션", src:"설천하우스 옆 쌍쌍리프트" },
+  { id:"06", name:"설천상단슬로프", src:"" },
+  { id:"10", name:"실크로드", src:"" },
+  { id:"04", name:"서역기행·썬다운", src:"10K 코스" },
+].map(c => ({ ...c, url: c.url || RELAY + c.id + "/playlist.m3u8" }));
 
 const v = document.getElementById("v"), msg = document.getElementById("msg");
+const nameEl = document.getElementById("name"), srcEl = document.getElementById("src");
+const grid = document.getElementById("grid");
+let cur = CAMS.find(c => c.id === location.hash.slice(1)) || CAMS[0];
 let hls = null;
+
+CAMS.forEach(c => {
+  const b = document.createElement("button");
+  b.className = "card"; b.dataset.id = c.id;
+  b.innerHTML = "<b></b><span class='src'></span>";
+  b.querySelector("b").textContent = c.name;
+  b.querySelector(".src").textContent = c.src || " ";
+  b.onclick = () => { cur = c; history.replaceState(null, "", "#" + c.id); reload(); };
+  grid.appendChild(b);
+});
+
+function show(t) { msg.textContent = t; msg.style.display = t ? "flex" : "none"; }
 function load() {
-  msg.style.display = "none";
+  nameEl.textContent = cur.name; srcEl.textContent = cur.src;
+  grid.querySelectorAll(".card").forEach(b => b.classList.toggle("on", b.dataset.id === cur.id));
+  show("불러오는 중…");
+  if (hls) { hls.destroy(); hls = null; }
   if (window.Hls && Hls.isSupported()) {
-    if (hls) hls.destroy();
     hls = new Hls({ liveSyncDurationCount: 2 });
-    hls.loadSource(KNPS); hls.attachMedia(v);
+    hls.loadSource(cur.url); hls.attachMedia(v);
     hls.on(Hls.Events.MANIFEST_PARSED, () => v.play().catch(() => {}));
-    hls.on(Hls.Events.ERROR, (e, d) => { if (d.fatal) { msg.textContent = "영상 불러오기 실패 — 잠시 후 다시 시도"; msg.style.display = "flex"; } });
+    hls.on(Hls.Events.ERROR, (e, d) => { if (d.fatal) show("영상 불러오기 실패 — 잠시 후 새로고침"); });
   } else if (v.canPlayType("application/vnd.apple.mpegurl")) {
-    v.src = KNPS + "?_t=" + Date.now(); v.play().catch(() => {});
+    v.src = cur.url; v.play().catch(() => {});
   }
 }
-load();
+v.addEventListener("playing", () => show(""));
 
 const REFRESH = 60; let left = REFRESH;
 const countEl = document.getElementById("count");
@@ -107,6 +113,7 @@ function reload() { load(); left = REFRESH; countEl.textContent = left; }
 document.getElementById("now").onclick = reload;
 setInterval(() => { if (--left <= 0) reload(); countEl.textContent = left; }, 1000);
 document.addEventListener("visibilitychange", () => { if (!document.hidden) reload(); });
+load();
 </script>
 </body>
 </html>
