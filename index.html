@@ -57,7 +57,7 @@
   <header>
     <h1>무주 CCTV</h1>
     <div class="seg"><button id="m1">한 개</button><button id="mAll">전체</button></div>
-    <span class="meta">새로고침 <span id="count">60</span>초</span>
+    <span class="meta">점검 <span id="count">60</span>초</span>
   </header>
 
   <section id="single">
@@ -102,12 +102,21 @@ function makePlayer(box) {
   let hls = null, url = null;
   const show = t => { msg.textContent = t; msg.style.display = t ? "flex" : "none"; };
   v.addEventListener("playing", () => show(""));
+  let lastT = -1;
   return {
+    // 1분 점검: 멈춰 있으면 다시 불러오고, 재생 중이면 실시간 지점으로 맞춤
+    check() {
+      if (!url) return;
+      if (v.currentTime === lastT || v.error) { this.load(); }
+      else if (hls && hls.liveSyncPosition && hls.liveSyncPosition - v.currentTime > 30) { v.currentTime = hls.liveSyncPosition; }
+      lastT = v.currentTime;
+    },
     load(u) {
+      lastT = -1;
       url = u || url; show("불러오는 중…");
       if (hls) { hls.destroy(); hls = null; }
       if (window.Hls && Hls.isSupported()) {
-        hls = new Hls({ liveSyncDurationCount: 2 });
+        hls = new Hls({ liveSyncDurationCount: 1, maxBufferLength: 20 });
         hls.loadSource(url); hls.attachMedia(v);
         hls.on(Hls.Events.MANIFEST_PARSED, () => v.play().catch(() => {}));
         hls.on(Hls.Events.ERROR, (e, d) => { if (d.fatal) show("영상 불러오기 실패 — 잠시 후 새로고침"); });
@@ -115,7 +124,7 @@ function makePlayer(box) {
         v.src = url; v.play().catch(() => {});
       }
     },
-    stop() { if (hls) { hls.destroy(); hls = null; } v.removeAttribute("src"); v.load(); },
+    stop() { url = null; if (hls) { hls.destroy(); hls = null; } v.removeAttribute("src"); v.load(); },
   };
 }
 
@@ -176,8 +185,12 @@ function reload() {
 const REFRESH = 60; let left = REFRESH;
 const countEl = document.getElementById("count");
 document.getElementById("now").onclick = reload;
-setInterval(() => { if (--left <= 0) reload(); countEl.textContent = left; }, 1000);
-document.addEventListener("visibilitychange", () => { if (!document.hidden) reload(); });
+function check() {
+  if (mode === "one") main.check(); else wall.forEach(w => w.p.check());
+  left = REFRESH; countEl.textContent = left;
+}
+setInterval(() => { if (--left <= 0) check(); countEl.textContent = left; }, 1000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) check(); });
 
 const h = location.hash.slice(1);
 cur = CAMS.find(c => c.id === h) || CAMS[0];
